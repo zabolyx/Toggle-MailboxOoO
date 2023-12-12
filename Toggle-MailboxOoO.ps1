@@ -1105,6 +1105,135 @@ Function fncLogThisEventWrite {
 #endregion #?=====LOGGING FUNCTIONS============================
 
 
+#region #?=====SUPPORT FOLDER FILE HUNTER FUNCTIONS=========
+
+Function fncFindSupportFolderOrFile {
+
+	<#
+
+	.SYNOPSIS
+		Searches scriptpath, parent, sibling, and children folders for needed support folder.
+
+	.DESCRIPTION
+		Searches scriptpath, parent, sibling, and children folders for needed support folders or files. This allows the end 
+		user more flexability in folder structure and file storage.	Such as finding the location to store log files 
+		in a folder called LOGS or a hunting for a script in a neighboring folder.
+
+	.PARAMETER Name
+		The name of the folder or file to find (mandatory).
+
+	.PARAMETER IsFolder
+		Specifies that the search is for a folder (mandatory if searching for a folder).
+
+	.PARAMETER IsFile
+		Specifies that the search is for a file (mandatory if searching for a file).
+
+	.EXAMPLE
+		PS> fncFindSupportFolderOrFile -Name "Data" -IsFolder
+
+		Search for a folder named "Data" in the script's location.
+
+	.EXAMPLE
+		PS> fncFindSupportFolderOrFile -Name "Config.xml" -IsFile
+
+		Search for a file named "Config.xml" in the script's location.
+
+
+	#>
+
+	Param (
+		
+		#pass the name of the file to find
+		[Parameter(Mandatory = $True, ParameterSetName = 'Folder')]
+		[Parameter(Mandatory = $True, ParameterSetName = 'File')]
+		[string]$Name,
+		
+		#switch to specify if a folder
+		[Parameter(Mandatory = $True, ParameterSetName = 'Folder')]
+		[switch]$IsFolder,
+
+		#switch to specify if is is a file
+		[Parameter(Mandatory = $True, ParameterSetName = 'File')]
+		[switch]$IsFile
+
+	)
+
+	#build the type of test-path cmdlet to use
+	If ($IsFile) {$strRunCommand = 'Test-Path -Path $($strFilePath) -PathType Leaf -ErrorAction SilentlyContinue'}
+	Else {$strRunCommand = 'Test-Path -Path $($strFilePath) -PathType Container -ErrorAction SilentlyContinue'}
+
+	#checking the script path for a matching folder or file
+	#generate the path to check
+	$strFilePath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($strScriptRoot, ".\$Name"))
+
+	#check the scriptroot path
+#	If (Test-Path $strFilePath -ErrorAction SilentlyContinue) {
+	If (Invoke-Expression $strRunCommand) {
+
+		#return the full file path name
+		Return $strFilePath
+
+	} #check the location and kick back the path if the file is found
+
+	#checking the script's parent path for a matching folder or file
+	#generate the path to check
+	$strFilePath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($strScriptRoot, "..\$Name"))
+
+	#check the script parent path
+#	If (Test-Path $strFilePath -ErrorAction SilentlyContinue) {
+	If (Invoke-Expression $strRunCommand) {
+
+		#return the full file path name
+		Return $strFilePath
+
+	} #check the location and kick back the path if the file is found
+
+	#checking the script's sibling folders for a matching folder or file
+	#loop through children folders
+	ForEach ($elmFolder in (Get-ChildItem $([System.IO.Path]::GetFullPath([System.IO.Path]::Combine($strScriptRoot, ".\"))) -Directory -Depth 1 -ErrorAction SilentlyContinue)) {
+
+		#generate the path to check
+		$strFilePath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($($elmFolder.FullName), ".\$Name"))
+
+		#check the script parent path
+#		If (Test-Path $strFilePath -ErrorAction SilentlyContinue) {
+		If (Invoke-Expression $strRunCommand) {
+
+			#return the full file path name
+			Return $strFilePath
+
+		} #check each location and kick back the 
+	
+	} #look in each of the children folders	
+
+	#checking the script's children paths for a matching folder or file
+	#loop through sibling folders
+	ForEach ($elmFolder in (Get-ChildItem $([System.IO.Path]::GetFullPath([System.IO.Path]::Combine($strScriptRoot, "..\"))) -Directory -Depth 1 -ErrorAction SilentlyContinue)) {
+
+		#generate the path to check
+		$strFilePath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($($elmFolder.FullName), ".\$Name"))
+
+
+		#check the script parent path
+#		If (Test-Path $strFilePath -ErrorAction SilentlyContinue) {
+		If (Invoke-Expression $strRunCommand) {
+
+			#return the full file path name
+			Return $strFilePath
+
+		} #check each location and kick back the 
+	
+	} #look in each of the sibling folders
+
+	#if nothing was found pass back $false as the answer so that the rest of the script can deal with it
+	Return $False
+
+} #used to find files or folders used by the script in the near by folders of the current folder path
+
+
+#endregion #?=====SUPPORT FOLDER FILE HUNTER FUNCTIONS=========
+
+
 #endregion #!TEMPLATE----------------------------------------------------
 
 
@@ -1301,7 +1430,6 @@ If ($bolLogWinEvent) {
 
 
 #endregion #?=====LOGGING INITIALIZATION=======================
-
 
 
 #region #?=====TRANSCRIPT INITIALIZATION=====================
