@@ -65,6 +65,7 @@
 
 #region [Parameters]
 
+
 [CmdletBinding(
 	#specifies the level of impact the script will have for use with the -Confirm parameter
 	ConfirmImpact = "Medium", #default is medium but you can set None, Low, Medium, High
@@ -133,6 +134,7 @@ Param (
 
 )
 
+
 #endregion
 
 
@@ -141,6 +143,7 @@ Param (
 #*=================================================================================================
 
 #region [Settings]
+
 
 #region #!MAIN----------------------------------------------------------
 
@@ -305,6 +308,7 @@ $strTransactionLogFile = ""
 
 #endregion #!TEMPLATE----------------------------------------------------
 
+
 #endregion
 
 
@@ -315,7 +319,9 @@ $strTransactionLogFile = ""
 
 #region [Functions]
 
+
 #region #!TEMPLATE-------------------------------------------------------
+
 
 #region #?=====COMMON FUNCTIONS=============================
 
@@ -3235,11 +3241,14 @@ Function fncJobManagerRemoveJob {
 #*	Initialization
 #*=================================================================================================
 
-
 #region [Initialization]
 
+#if WhatIf is passed, disable until needed in the script
+#this will keep cmdlets from triggering on the WhatIf property outside of where this script needs to trigger
+If (($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))) {$global:WhatIfPreference = $False}
+
 #write the start of script message if WhatIf is not passed
-If (!($PSCmdlet.MyInvocation.BoundParameters["WhatIf"].IsPresent)) {fncLogThis "INFO:Starting script $strScriptName" -WelWrite}
+If (!($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))) {fncLogThis "INFO:Starting script $strScriptName" -WelWrite}
 
 
 #region #!TEMPLATE-------------------------------------------------------
@@ -3524,59 +3533,70 @@ $strTransactionLogFile = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine
 
 #region [Main]
 
-
-#region [Validations]
-
-#endregion 
-
-#set the counter for the WhatIf loop check
-$intCounter = 0
+#if WhatIf was passed, re-enable for use in the scriptin the script
+#this will keep cmdlets from triggering on the WhatIf property outside of where this script needs to trigger
+If (($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))) {$global:WhatIfPreference = $True}
 
 #process the emails in the configured email list
-ForEach ($pcoMailbox in $MailboxGUIDs2Proceess) {
+ForEach ($pcoMailbox in $arrMailboxGUIDs2Proceess) {
 
-#region [WhatIf]
+	#process the changes if the 
+	If ($PSCmdlet.ShouldProcess("$($pcoMailbox.EmailAddress)", "Disable OoO state")) {
 
-    #check if the -WhatIf switch is passed and report the expected changes
-    If ($PSCmdlet.MyInvocation.BoundParameters["WhatIf"].IsPresent) {
+		#write to the log
+		fncLogThis "INFO:Disabling OoO for mailbox $($pcoMailbox.EmailAddress)" -WelBlock
 
-        #write the what if statement to the screen without logging
-        Write-Host "WhatIf: Toogle the OoO settings for the mailbox $($pcoMailbox.EmailAddress)"
+		#attempt to disable the OoO message
+		Try {
 
-        #increment the counter for testing if the loop is complete
-        $intCounter++
-        
-        #if the loop has completed exit the script
-        If ($intCounter -ge $arrMailboxGUIDs2Proceess.Count) {Exit}
+			#disable the OoO settings for the mailbox
+			Set-MailboxAutoReplyConfiguration accountspayable@cmh.edu -AutoReplyState Disable
 
-    } #write out the whatif info if needed
+			#write to the log
+			fncLogThis "SUCCESS:Disabled OoO for mailbox $($pcoMailbox.EmailAddress)" -WelBlock
 
-#endregion
+		}
+		Catch {
 
-    #process the changes if the 
-    If (!($PSCmdlet.MyInvocation.BoundParameters["WhatIf"].IsPresent)) {
+			#write to the log
+			fncLogThis "WARNING:Failed to disable OoO for mailbox $($pcoMailbox.EmailAddress)" -WelBlock
 
-        #write to the log
-        fncLogThis "Disabling OoO for mailbox $($pcoMailbox.EmailAddress)"
+		}	
 
-        #disable the OoO settings for the mailbox
-        Set-MailboxAutoReplyConfiguration accountspayable@cmh.edu -AutoReplyState Disable
+	} #process disabling OoO
 
-        #write to the log
-        fncLogThis "Enabling OoO for mailbox $($pcoMailbox.EmailAddress)"
+	If ($PSCmdlet.ShouldProcess("$($pcoMailbox.EmailAddress)", "Enable OoO state")) {
+		
+		#write to the log
+		fncLogThis "INFO:Enabling OoO for mailbox $($pcoMailbox.EmailAddress)" -WelBlock
 
-        #disable the OoO settings for the mailbox
-        Set-MailboxAutoReplyConfiguration accountspayable@cmh.edu -AutoReplyState Enabled
+		#attempt to enable the OoO message
+		Try {
 
-    } #process items outside of the 
+			#disable the OoO settings for the mailbox
+			Set-MailboxAutoReplyConfiguration accountspayable@cmh.edu -AutoReplyState Enabled
+
+			#write to the log
+			fncLogThis "SUCCESS:Enabled OoO for mailbox $($pcoMailbox.EmailAddress)" -WelWrite
+
+		}
+		Catch {
+
+			#write to the log
+			fncLogThis "ERROR:Failed to enable OoO for mailbox $($pcoMailbox.EmailAddress)" -WelWrite
+
+		}
+
+	} #process enabling OoO
 
 } #process each email in the list
 
 
+#write script completion
+If (!($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))) {fncLogThis "DONE:Script $strScriptName has completed" -WelWrite}
+
+
 #endregion
-
-fncLogThis "DONE:Script $strScriptName has completed" -WelWrite
-
 
 #*=================================================================================================
 #*	Further Documentation
