@@ -1377,11 +1377,13 @@ If ($bolLogWinEvent) {
 #this will keep cmdlets from triggering on the WhatIf property outside of where this script needs to trigger
 If (($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))) {$global:WhatIfPreference = $True}
 
-
 #call script to connect to Exchange Online
-$strScriptPath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($strScriptRoot, "..\Support\Connect-zExO.ps1"))
-& $strScriptPath -CredSet ExO -CallingLogPath $sLogFilePath -CallingLogBoth -NoRemote
+If (!($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))) {
 
+	$strScriptPath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($strScriptRoot, "..\Support\Connect-zExO.ps1"))
+	& $strScriptPath -CredSet ExO -CallingLogPath $sLogFilePath -CallingLogBoth -NoRemote
+
+}
 
 #process the emails in the configured email list
 ForEach ($pcoMailbox in $arrMailboxGUIDs2Proceess) {
