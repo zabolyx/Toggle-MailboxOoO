@@ -1,0 +1,7 @@
+{
+	"powershell.powerShellDefaultVersion": "Posh 5 x64",
+	"powershell.powerShellAdditionalExePaths": {
+		"Posh 5 x64": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+		"Posh 5 x32": "C:\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe"
+	}
+}
